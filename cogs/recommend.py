@@ -56,7 +56,7 @@ class Recommend(commands.Cog, name="recommend"):
 
 
     @recommend.error
-    async def recommend_error(self, context: Context, error):
+    async def recommend_error(self, context: Context, error) -> None:
         """
         Error handling for the 'recommend' command.
 
