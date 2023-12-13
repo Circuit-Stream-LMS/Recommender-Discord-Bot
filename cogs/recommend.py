@@ -8,7 +8,9 @@ Version: 6.1.0
 
 
 import pandas as pd
-from surprise import Dataset, Reader, KNNBasic
+from surprise import Dataset, Reader, SVD
+from surprise.model_selection import train_test_split
+from surprise import accuracy
 from discord.ext import commands
 from discord.ext.commands import Context
 
@@ -17,6 +19,16 @@ from discord.ext.commands import Context
 class Recommend(commands.Cog, name="recommend"):
     def __init__(self, bot) -> None:
         self.bot = bot
+
+        # Load the MovieLens dataset (you can replace this with your dataset)
+        self.data = Dataset.load_builtin('ml-100k')
+        self.algo = SVD()
+
+        # Split the data into a training set and a test set
+        self.trainset, self.testset = train_test_split(self.data, test_size=0.25)
+
+        # Train the algorithm on the training set
+        self.algo.fit(self.trainset)
 
     @commands.hybrid_command(
         name="recommend",
@@ -30,10 +42,16 @@ class Recommend(commands.Cog, name="recommend"):
         :param user_id: The user ID for which recommendations are needed.
         :param item_id: The item ID to base the recommendations on.
         """
-        # Implement the logic to call your recommendation model and process the output here.
-        # For now, sending a confirmation message.
-        await context.send(f"Getting recommendations for user {user_id} and item {item_id}...")
+        try:
+            # Make a prediction using the provided user_id and item_id
+            prediction = self.algo.predict(str(user_id), str(item_id))
 
+            # Send the recommendation to Discord
+            await context.send(f"Prediction for User {user_id} on Item {item_id}:")
+            await context.send(f"Rating Prediction: {prediction.est}")
+
+        except Exception as e:
+            await context.send(f"An error occurred: {str(e)}")
 
 
 
@@ -59,56 +77,3 @@ class Recommend(commands.Cog, name="recommend"):
 async def setup(bot) -> None:
     await bot.add_cog(Recommend(bot))
 
-
-
-
-
-
-
-class RecommenderSystem:
-    def __init__(self, data_path):
-        self.data = pd.read_csv(data_path)
-        reader = Reader(rating_scale=(1, 5))
-        self.data = Dataset.load_from_df(self.data[['user_id', 'item_id', 'rating']], reader)
-        trainset = self.data.build_full_trainset()
-        algo = KNNBasic()
-        algo.fit(trainset)
-        self.algo = algo
-
-    def predict_rating(self, user_id, item_id):
-        try:
-            prediction = self.algo.predict(str(user_id), str(item_id))
-            return prediction.est
-        except Exception:
-            return None
-
-# Initialize the recommender system (replace 'your_data.csv' with your actual file path)
-recommender = RecommenderSystem('your_data.csv')
-
-class Template(commands.Cog, name="template"):
-    def __init__(self, bot) -> None:
-        self.bot = bot
-
-    # Your existing commands...
-
-    @commands.hybrid_command(
-        name="recommend",
-        description="Get recommendations based on user and item IDs.",
-    )
-    async def recommend(self, context: Context, user_id: int, item_id: int) -> None:
-        """
-        This command provides recommendations based on user and item IDs.
-
-        :param context: The application command context.
-        :param user_id: The user ID for which recommendations are needed.
-        :param item_id: The item ID to base the recommendations on.
-        """
-        rating = recommender.predict_rating(user_id, item_id)
-        if rating is not None:
-            await context.send(f"Predicted rating for user {user_id} on item {item_id} is {rating}")
-        else:
-            await context.send("User ID or Item ID not found in the dataset.")
-
-    # Your existing error handlers...
-
-# Your existing setup and other necessary code...
