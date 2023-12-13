@@ -6,6 +6,9 @@ Description:
 Version: 6.1.0
 """
 
+
+import pandas as pd
+from surprise import Dataset, Reader, KNNBasic
 from discord.ext import commands
 from discord.ext.commands import Context
 
@@ -55,3 +58,57 @@ class Recommend(commands.Cog, name="recommend"):
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
 async def setup(bot) -> None:
     await bot.add_cog(Recommend(bot))
+
+
+
+
+
+
+
+class RecommenderSystem:
+    def __init__(self, data_path):
+        self.data = pd.read_csv(data_path)
+        reader = Reader(rating_scale=(1, 5))
+        self.data = Dataset.load_from_df(self.data[['user_id', 'item_id', 'rating']], reader)
+        trainset = self.data.build_full_trainset()
+        algo = KNNBasic()
+        algo.fit(trainset)
+        self.algo = algo
+
+    def predict_rating(self, user_id, item_id):
+        try:
+            prediction = self.algo.predict(str(user_id), str(item_id))
+            return prediction.est
+        except Exception:
+            return None
+
+# Initialize the recommender system (replace 'your_data.csv' with your actual file path)
+recommender = RecommenderSystem('your_data.csv')
+
+class Template(commands.Cog, name="template"):
+    def __init__(self, bot) -> None:
+        self.bot = bot
+
+    # Your existing commands...
+
+    @commands.hybrid_command(
+        name="recommend",
+        description="Get recommendations based on user and item IDs.",
+    )
+    async def recommend(self, context: Context, user_id: int, item_id: int) -> None:
+        """
+        This command provides recommendations based on user and item IDs.
+
+        :param context: The application command context.
+        :param user_id: The user ID for which recommendations are needed.
+        :param item_id: The item ID to base the recommendations on.
+        """
+        rating = recommender.predict_rating(user_id, item_id)
+        if rating is not None:
+            await context.send(f"Predicted rating for user {user_id} on item {item_id} is {rating}")
+        else:
+            await context.send("User ID or Item ID not found in the dataset.")
+
+    # Your existing error handlers...
+
+# Your existing setup and other necessary code...
