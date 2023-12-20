@@ -15,7 +15,9 @@ from fuzzywuzzy import process
 class Recommend(commands.Cog, name="recommend"):
     def __init__(self, bot) -> None:
         self.bot = bot
-        self.data = Dataset.load_builtin('ml-100k')
+        reader = Reader(line_format='user item rating timestamp', sep='\t', rating_scale=(1, 5))
+        data_file = 'ml-100k/u.data'
+        self.data = Dataset.load_from_file(data_file, reader=reader)
         self.algo = SVD()
         self.trainset, self.testset = train_test_split(self.data, test_size=0.25)
         self.algo.fit(self.trainset)
