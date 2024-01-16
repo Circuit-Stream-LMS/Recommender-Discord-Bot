@@ -170,11 +170,13 @@ class Recommend(commands.Cog, name="recommend"):
         description="Get recommendations based on username and partial movie name.",
     )
     async def recommend(self, ctx: commands.Context, partial_movie_name: str):
-        discord_user_id = str(ctx.author.id)
+        discord_username = ctx.author.name
 
-        if discord_user_id not in self.user_id_mapping:
+        if discord_username not in self.username_mapping:
             await ctx.send("Discord user not found. Please register first.")
             return
+
+        user_id = self.username_mapping[discord_username]
 
         closest_match = process.extractOne(partial_movie_name, self.movie_titles.keys(), score_cutoff=70)
         if not closest_match:
@@ -182,11 +184,10 @@ class Recommend(commands.Cog, name="recommend"):
             return
 
         movie_name, movie_id = closest_match[0], self.movie_titles[closest_match[0]]
-        user_id = self.user_id_mapping[discord_user_id]
         prediction = self.algo.predict(str(user_id), str(movie_id))
 
         await ctx.send(f"Closest match: '{movie_name}'")
-        await ctx.send(f"Prediction for User '{ctx.author.name}' on Movie '{movie_name}':")
+        await ctx.send(f"Prediction for User '{discord_username}' on Movie '{movie_name}':")
         await ctx.send(f"Rating Prediction: {prediction.est}")
 
 
