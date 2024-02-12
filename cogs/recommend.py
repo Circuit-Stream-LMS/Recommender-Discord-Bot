@@ -1,6 +1,7 @@
 import pandas as pd
 from surprise import Dataset, Reader, SVD
 from surprise.model_selection import train_test_split
+import discord
 from discord.ext import commands
 from fuzzywuzzy import process
 import os
@@ -126,16 +127,26 @@ class Recommend(commands.Cog, name="recommend"):
 
         closest_match = process.extractOne(partial_movie_name, self.movie_titles.keys(), score_cutoff=70)
         if not closest_match:
-            await ctx.send("No close match found for the movie name. Please try again.")
+            embed = discord.Embed(
+                title="No close match found for the movie name. Please try again.",
+                color=0xE02B2B,
+            )
+            
+            await ctx.send(embed=embed)
             return
 
         movie_name, movie_id = closest_match[0], self.movie_titles[closest_match[0]]
         prediction = self.algo.predict(str(user_id), str(movie_id))
 
-        await ctx.send(f"Closest match: '{movie_name}'")
-        await ctx.send(f"Prediction for User '{discord_username}' on Movie '{movie_name}':")
-        await ctx.send(f"Rating Prediction: {prediction.est}")
 
+        embed = discord.Embed(
+                title=f"Closest match: '{movie_name}'",
+                description=f"Prediction for User '{discord_username}' on Movie '{movie_name}':\n "f"Rating Prediction: {prediction.est}",
+                color=0x57F287,
+        )
+
+        await ctx.send(embed=embed)
+        
 
 
 async def setup(bot) -> None:
