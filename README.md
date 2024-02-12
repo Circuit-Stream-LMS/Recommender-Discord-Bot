@@ -19,6 +19,13 @@
   your bot needs that it can be get at the bottom of a this
   page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
 
+## Data
+
+The data used for this template is the MovieLens 100k Dataset. This dataset can be found 
+here: https://grouplens.org/datasets/movielens/100k/
+
+The folder labeled ml-100k should be placed in the root of this project directory.
+
 ## How to set up
 
 To set up the bot it was made as simple as possible.
