@@ -5,6 +5,10 @@ import discord
 from discord.ext import commands
 from fuzzywuzzy import process
 import os
+import openai
+from openai import client
+
+openai.api_key = '<KEY HERE>'
 
 class Recommend(commands.Cog, name="recommend"):
     def __init__(self, bot) -> None:
@@ -116,7 +120,7 @@ class Recommend(commands.Cog, name="recommend"):
         name="recommend",
         description="Get recommendations based on username and partial movie name.",
     )
-    async def recommend(self, ctx: commands.Context, partial_movie_name: str):
+    async def recommend(self, ctx: commands.Context, *, partial_movie_name: str):
         discord_username = ctx.author.name
 
         if discord_username not in self.username_mapping:
@@ -124,8 +128,41 @@ class Recommend(commands.Cog, name="recommend"):
             return
 
         user_id = self.username_mapping[discord_username]
+        
 
-        closest_match = process.extractOne(partial_movie_name, self.movie_titles.keys(), score_cutoff=70)
+        thread = client.beta.threads.create()
+
+
+        message = client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=partial_movie_name
+        )
+
+
+        run = client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id='asst_YG5OkY4HtY72ZXKWCOXIL8qb',
+        )
+
+
+        messages = client.beta.threads.messages.list(
+        thread_id=thread.id
+        )
+
+        # Extract the Assistant's response from messages
+        # This code assumes the last message in the list is the Assistant's response
+        assistant_response = messages.data[-1].content if messages.data else "NULL"
+
+        if assistant_response == "NULL":
+            await ctx.send("No specific movie mentioned. Please provide more details.")
+            return
+        
+        
+        
+        
+
+        closest_match = process.extractOne(assistant_response, self.movie_titles.keys(), score_cutoff=70)
         if not closest_match:
             embed = discord.Embed(
                 title="No close match found for the movie name. Please try again.",
