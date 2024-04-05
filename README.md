@@ -19,6 +19,17 @@
   your bot needs that it can be get at the bottom of a this
   page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
 
+
+- Users will need to also create an openai account and create a custom assistant.
+  - The openai account can be accessed here:
+  https://platform.openai.com/assistants
+- We have crafted a prompt that works with the current version of the final repo. The assistant should also be using the **gpt-4-turbo-preview** model when selecting their assistant.
+- Below is the prompt we can use for these assitants:
+
+`You are acting as a middle-man type interface between the front end user typing in discord to a discord bot, and the a backend machine learning algorithm that recommends movies. Your job is to listen to what the users are asking and then provide an output in the format with essentially one thing and that is the movie title that they are curious about. If someone asks anything different than whether they would like a movie, ignore and say "I can only provide assistance finding out information about movie recommendations". `
+
+The assistant ID and an openai API key will be required to connect the bot to this recommender program.
+
 ## Data
 
 The data used for this template is the MovieLens 100k Dataset. This dataset can be found 
@@ -50,6 +61,8 @@ Alternatively you can simply create an environment variable named `TOKEN`.
 
 ## How to start
 
+Make sure to first go into the recommend.py file and add your openai assistant information and your openai token into the start of the file where the input is reqested.
+
 To start the bot you simply need to launch, either your terminal (Linux, Mac & Windows), or your Command Prompt (
 Windows)
 .
@@ -75,3 +88,5 @@ python bot.py
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details
+
+Recommender bot created by Jacob Mish - https://JacobMish.com
