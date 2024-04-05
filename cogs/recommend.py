@@ -1,10 +1,19 @@
 import pandas as pd
 from surprise import Dataset, Reader, SVD
-from surprise.model_selection import train_test_split
 import discord
 from discord.ext import commands
 from fuzzywuzzy import process
 import os
+from openai import OpenAI
+import asyncio
+
+
+OPEN_AI_API_KEY = "YOUR OPENAI API KEY HERE!"
+OPEN_AI_ASSISTANTS_ID = "YOUR OPENAI ASSISTANTS ID HERE!"
+
+client = OpenAI(
+    api_key=OPEN_AI_API_KEY, 
+)
 
 class Recommend(commands.Cog, name="recommend"):
     def __init__(self, bot) -> None:
@@ -111,12 +120,11 @@ class Recommend(commands.Cog, name="recommend"):
         await ctx.send(message)
 
 
-
     @commands.hybrid_command(
         name="recommend",
         description="Get recommendations based on username and partial movie name.",
     )
-    async def recommend(self, ctx: commands.Context, partial_movie_name: str):
+    async def recommend(self, ctx: commands.Context, *, partial_movie_name: str):
         discord_username = ctx.author.name
 
         if discord_username not in self.username_mapping:
@@ -125,28 +133,65 @@ class Recommend(commands.Cog, name="recommend"):
 
         user_id = self.username_mapping[discord_username]
 
-        closest_match = process.extractOne(partial_movie_name, self.movie_titles.keys(), score_cutoff=70)
+
+        client = OpenAI(
+            api_key=OPEN_AI_API_KEY, 
+        )
+
+        # Create a thread with the initial user message
+        thread = client.beta.threads.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": partial_movie_name
+                }
+            ]
+        )
+
+        # Start a run with the assistant
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=OPEN_AI_ASSISTANTS_ID,
+        )
+
+        # Wait for the assistant's response
+        assistant_response = await self.wait_for_response(thread.id)
+
+        if not assistant_response:
+            await ctx.send("No response from the assistant. Please try again later.")
+            return
+
+
+        print("OpenAI's response from the bot: ", assistant_response[0].text.value)
+        
+        # Process the assistant's response
+        closest_match = process.extractOne(assistant_response[0].text.value, self.movie_titles.keys(), score_cutoff=70)
         if not closest_match:
             embed = discord.Embed(
                 title="No close match found for the movie name. Please try again.",
                 color=0xE02B2B,
             )
-            
             await ctx.send(embed=embed)
             return
 
         movie_name, movie_id = closest_match[0], self.movie_titles[closest_match[0]]
         prediction = self.algo.predict(str(user_id), str(movie_id))
 
-
         embed = discord.Embed(
-                title=f"Closest match: '{movie_name}'",
-                description=f"Prediction for User '{discord_username}' on Movie '{movie_name}':\n "f"Rating Prediction: {prediction.est}",
-                color=0x57F287,
+            title=f"Closest match: '{movie_name}'",
+            description=f"Prediction for User '{discord_username}' on Movie '{movie_name}':\nRating Prediction: {prediction.est}",
+            color=0x57F287,
         )
 
         await ctx.send(embed=embed)
-        
+
+    async def wait_for_response(self, thread_id):
+        """Wait for the assistant's response in the given thread."""
+        for _ in range(30):  # Wait up to 30 seconds for a response
+            await asyncio.sleep(1)  # Correctly await the sleep
+            messages = client.beta.threads.messages.list(thread_id=thread_id)
+            if len(messages.data) > 1:  # Assuming the first message is the user's and the second is the assistant's
+                return messages.data[0].content  # Return the assistants content
 
 
 async def setup(bot) -> None:
