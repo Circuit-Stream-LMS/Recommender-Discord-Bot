@@ -11,10 +11,13 @@ import asyncio
 OPEN_AI_API_KEY = "YOUR OPENAI API KEY HERE!"
 OPEN_AI_ASSISTANTS_ID = "YOUR OPENAI ASSISTANTS ID HERE!"
 
+
+
+
 client = OpenAI(
     api_key=OPEN_AI_API_KEY, 
 )
-
+# Main recommend COG class
 class Recommend(commands.Cog, name="recommend"):
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -33,6 +36,7 @@ class Recommend(commands.Cog, name="recommend"):
         self.algo = SVD()
         self.retrain_model()
 
+    # Init function to load all registered users with the bot
     def load_users(self):
         if not os.path.exists(self.user_file):
             return {}, {}
@@ -44,20 +48,23 @@ class Recommend(commands.Cog, name="recommend"):
         return id_mapping, name_mapping
 
 
-
+    # Loads all movie titles from the data file
     def load_movie_titles(self):
         item_data = pd.read_csv(self.item_file, delimiter='|', encoding='ISO-8859-1', 
                                 usecols=[0, 1], names=['movie_id', 'title'])
         return dict(zip(item_data['title'], item_data['movie_id']))
 
+    # Loads all of the total data from the dataset
     def load_data(self):
         reader = Reader(line_format='user item rating timestamp', sep='\t', rating_scale=(1, 5))
         return Dataset.load_from_file(self.data_file, reader=reader)
 
+    # Used to retrain the model when new data is added by users.
     def retrain_model(self):
         trainset = self.data.build_full_trainset()
         self.algo.fit(trainset)
 
+    # Function to add a user to the data
     async def add_user(self, discord_user):
         discord_user_id = str(discord_user.id)
         discord_username = discord_user.name
@@ -77,7 +84,7 @@ class Recommend(commands.Cog, name="recommend"):
 
         return True, f"Discord username '{discord_username}' added with ID {new_user_id}."
 
-
+    # Function to add a rating to a given movie name, requires a user to already be added to the database
     async def add_rating(self, discord_user, partial_movie_title: str, rating: float):
         discord_username = discord_user.name
 
@@ -102,6 +109,7 @@ class Recommend(commands.Cog, name="recommend"):
 
         return True, f"Rating added for Discord user '{discord_username}' on movie '{movie_title}'."
 
+    # Executes the discord command to add a user
     @commands.hybrid_command(
         name="add_user",
         description="Register the Discord user in the recommendation system.",
@@ -110,7 +118,7 @@ class Recommend(commands.Cog, name="recommend"):
         success, message = await self.add_user(ctx.author)
         await ctx.send(message)
 
-
+    # Executes the discord command to add a rating, requires user to already be added
     @commands.hybrid_command(
         name="add_rating",
         description="Add a movie rating for a Discord user.",
@@ -119,7 +127,7 @@ class Recommend(commands.Cog, name="recommend"):
         success, message = await self.add_rating(ctx.author, movie_title, rating)
         await ctx.send(message)
 
-
+    # Executes the discord command to provide a recommendation to the user based on a movie they appear to be asking about, requires user to already be registered via the add_user command
     @commands.hybrid_command(
         name="recommend",
         description="Get recommendations based on username and partial movie name.",
